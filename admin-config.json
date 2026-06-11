@@ -1,0 +1,43 @@
+{
+  "tabs": [
+    {
+      "id": "general",
+      "label": "General",
+      "fields": [
+        {
+          "key": "debug_mode",
+          "label": "Debug mode",
+          "component": "checkbox",
+          "description": "Enable verbose debug logging. Disable in production (live mode)."
+        },
+        {
+          "key": "enabled",
+          "label": "Bridge enabled",
+          "component": "checkbox",
+          "description": "Master switch for the in-process meinchat bot bridge. When off, no message is ever ingested."
+        },
+        {
+          "key": "bot_user_email",
+          "label": "Bot user email",
+          "component": "input",
+          "inputType": "text",
+          "description": "Email of the designated bot user (a real, findable meinchat user with role BOT, provisioned automatically). Any user can find this account in meinchat search and start a conversation with it; the bot replies in that conversation. Empty keeps the bridge inert."
+        },
+        {
+          "key": "bot_nickname",
+          "label": "Bot nickname",
+          "component": "input",
+          "inputType": "text",
+          "description": "meinchat nickname the bot replies under, and how users find it in search."
+        },
+        {
+          "key": "bot_conversation_id",
+          "label": "Bot conversation id (legacy)",
+          "component": "input",
+          "inputType": "text",
+          "description": "Optional legacy single-conversation id. No longer the trigger — the bot answers in any conversation it is a participant of. Leave empty."
+        }
+      ]
+    }
+  ]
+}
