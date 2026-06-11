@@ -62,9 +62,7 @@ class TestOutboundMeta:
             ],
         )
 
-        provider.send(
-            reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4()))
-        )
+        provider.send(reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())))
 
         meta = sender.sent[0]["meta"]
         assert meta == {
@@ -83,9 +81,7 @@ class TestOutboundMeta:
             choices=[BotChoice(label="Reveal", action_data="taro:reveal:1")],
         )
 
-        provider.send(
-            reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4()))
-        )
+        provider.send(reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())))
 
         body = sender.sent[0]["body"]
         assert "Pick one" in body
@@ -120,6 +116,118 @@ class TestOutboundMeta:
         )
 
         assert sender.sent[0]["meta"]["choices"][0]["hint"] == "€29/mo"
+
+
+class TestOutboundRichKinds:
+    """S70.3 — ``BotReply.meta`` (provider-neutral) flows into ``message.meta``."""
+
+    def test_choices_with_hint_and_meta_text_emit_kind_text_choices(self):
+        sender = _RecordingSender()
+        provider = _provider(sender=sender)
+        reply = BotReply(
+            text="Choose a tarif plan (a new pick replaces the current one):",
+            choices=[
+                BotChoice(
+                    label="Pro", action_data="subscription:plan:42", hint="€29/mo"
+                ),
+            ],
+            meta={
+                "kind": "bot_choices",
+                "text": "Choose a tarif plan (a new pick replaces the current one):",
+            },
+        )
+
+        provider.send(reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())))
+
+        meta = sender.sent[0]["meta"]
+        assert meta["kind"] == "bot_choices"
+        assert meta["text"].startswith("Choose a tarif plan")
+        assert meta["choices"] == [
+            {"label": "Pro", "action_data": "subscription:plan:42", "hint": "€29/mo"}
+        ]
+
+    def test_choices_still_keep_numbered_body_fallback_with_meta_text(self):
+        sender = _RecordingSender()
+        provider = _provider(sender=sender)
+        reply = BotReply(
+            text="Pick a plan:",
+            choices=[BotChoice(label="Pro", action_data="subscription:plan:42")],
+            meta={"kind": "bot_choices", "text": "Clean prompt"},
+        )
+
+        provider.send(reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())))
+
+        body = sender.sent[0]["body"]
+        assert "1. Pro" in body
+        assert "Reply with the number" in body
+
+    def test_bot_cart_meta_passes_through_to_message_meta(self):
+        sender = _RecordingSender()
+        provider = _provider(sender=sender)
+        cart_meta = {
+            "kind": "bot_cart",
+            "items": [
+                {
+                    "name": "Pro",
+                    "quantity": 1,
+                    "unit_price": "29.00",
+                    "line_total": "29.00",
+                }
+            ],
+            "total": "29.00",
+            "currency": "EUR",
+        }
+        reply = BotReply(text="Your cart: Pro — €29.00", meta=cart_meta)
+
+        provider.send(reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())))
+
+        assert sender.sent[0]["meta"] == cart_meta
+        # Body fallback preserved for non-rich clients.
+        assert sender.sent[0]["body"] == "Your cart: Pro — €29.00"
+
+    def test_bot_menu_meta_passes_through_to_message_meta(self):
+        sender = _RecordingSender()
+        provider = _provider(sender=sender)
+        menu_meta = {
+            "kind": "bot_menu",
+            "commands": [{"command": "/tarifs", "description": "Browse tarif plans"}],
+        }
+        reply = BotReply(
+            text="Available commands:\n/tarifs — Browse tarif plans", meta=menu_meta
+        )
+
+        provider.send(reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())))
+
+        assert sender.sent[0]["meta"] == menu_meta
+
+    def test_plain_reply_with_no_choices_and_no_meta_sends_no_meta(self):
+        sender = _RecordingSender()
+        provider = _provider(sender=sender)
+
+        provider.send(
+            BotReply(text="Hello!"),
+            to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())),
+        )
+
+        assert sender.sent[0]["meta"] is None
+
+
+class TestInboundRemoveTap:
+    def test_remove_action_data_dispatches_as_action(self):
+        provider = _provider()
+        inbound = provider.parse_update(
+            _inbound_payload(
+                conversation_id=uuid4(),
+                sender_id=uuid4(),
+                body="Pro ×1 — €29",
+                meta={
+                    "kind": "bot_action",
+                    "action_data": "subscription:remove:SUBSCRIPTION:42",
+                },
+            )
+        )
+        assert inbound.action_data == "subscription:remove:SUBSCRIPTION:42"
+        assert inbound.command is None
 
 
 class TestInboundMeta:

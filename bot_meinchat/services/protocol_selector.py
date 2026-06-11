@@ -33,7 +33,9 @@ def select_bot_protocol() -> str:
     case meinchat-plus is enabled and the conversation is end-to-end encrypted.
     """
     try:
-        directory = registry.resolve_first(cast("Type[IDeviceDirectory]", IDeviceDirectory))
+        directory = registry.resolve_first(
+            cast("Type[IDeviceDirectory]", IDeviceDirectory)
+        )
     except LookupError:
         return BOT_PROTOCOL_PLAIN
     if isinstance(directory, NullDeviceDirectory):

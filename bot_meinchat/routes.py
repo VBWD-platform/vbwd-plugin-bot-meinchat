@@ -141,9 +141,7 @@ def admin_delete_style(style_id: str):
     return jsonify({"deleted": True}), 200
 
 
-@bot_meinchat_bp.route(
-    "/api/v1/admin/bot-styles/<style_id>/activate", methods=["POST"]
-)
+@bot_meinchat_bp.route("/api/v1/admin/bot-styles/<style_id>/activate", methods=["POST"])
 @require_auth
 @require_admin
 @require_permission(MANAGE_PERMISSION)

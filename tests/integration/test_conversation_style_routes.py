@@ -100,9 +100,7 @@ def test_create_then_get_style(app, client):
     assert created["name"] == "Branded"
     assert created["tokens"] == _TOKENS
 
-    fetched = client.get(
-        f"/api/v1/admin/bot-styles/{created['id']}", headers=headers
-    )
+    fetched = client.get(f"/api/v1/admin/bot-styles/{created['id']}", headers=headers)
     assert fetched.status_code == 200
     assert fetched.get_json()["name"] == "Branded"
 

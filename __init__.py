@@ -318,10 +318,7 @@ class BotMeinchatPlugin(BasePlugin):
         # Resolve the designated bot user FIRST — a blank email keeps the bridge
         # inert without ever touching the app context / container / session.
         email = str(
-            self._config_value(
-                "bot_user_email", DEFAULT_CONFIG["bot_user_email"]
-            )
-            or ""
+            self._config_value("bot_user_email", DEFAULT_CONFIG["bot_user_email"]) or ""
         ).strip()
         if not email:
             return None  # no bot user designated — the bridge stays inert.

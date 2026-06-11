@@ -170,7 +170,7 @@ class MeinchatProvider:
         unchanged.
         """
         body = self._render_body(reply)
-        meta = self._build_choices_meta(reply.choices)
+        meta = self._build_meta(reply)
         self.remember_choices(to, reply.choices)
         self._message_sender.send_text(
             conversation_id=UUID(to.chat_id),
@@ -179,15 +179,36 @@ class MeinchatProvider:
             meta=meta,
         )
 
+    @classmethod
+    def _build_meta(cls, reply: BotReply) -> Optional[Dict[str, Any]]:
+        """Translate the neutral reply into meinchat's ``message.meta``.
+
+        * choices present → a ``bot_choices`` payload (kind from
+          ``reply.meta`` if set, the serialized choices with optional ``hint``,
+          and ``reply.meta['text']`` as the clean card prompt when present);
+        * no choices but ``reply.meta`` present → that provider-neutral payload
+          passes straight through (``bot_cart`` / ``bot_menu`` / ...);
+        * otherwise → ``None`` (a plain reply carries no structured meta).
+
+        The numbered-text ``body`` is built independently (the universal
+        fallback), so a client ignoring ``meta`` is unaffected — Liskov.
+        """
+        reply_meta = reply.meta or None
+        if reply.choices:
+            meta: Dict[str, Any] = {
+                "kind": (reply_meta or {}).get("kind", "bot_choices"),
+                "choices": cls._serialize_choices(reply.choices),
+            }
+            if reply_meta and reply_meta.get("text"):
+                meta["text"] = reply_meta["text"]
+            return meta
+        if reply_meta:
+            return reply_meta
+        return None
+
     @staticmethod
-    def _build_choices_meta(
-        choices: List[BotChoice],
-    ) -> Optional[Dict[str, Any]]:
-        """Build the ``bot_choices`` structured payload, or ``None`` for a plain
-        reply. ``hint`` is read defensively so a future hint-bearing choice
-        flows through without a type change."""
-        if not choices:
-            return None
+    def _serialize_choices(choices: List[BotChoice]) -> List[Dict[str, Any]]:
+        """Serialize choices, including each optional ``hint`` when present."""
         serialized_choices = []
         for choice in choices:
             entry: Dict[str, Any] = {
@@ -198,7 +219,7 @@ class MeinchatProvider:
             if hint:
                 entry["hint"] = hint
             serialized_choices.append(entry)
-        return {"kind": "bot_choices", "choices": serialized_choices}
+        return serialized_choices
 
     @staticmethod
     def _render_body(reply: BotReply) -> str:

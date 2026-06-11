@@ -45,7 +45,9 @@ class _CapturingPipeline:
 def _hook(*, bot_conversations, bot_user_id, pipeline):
     """Build a hook whose participant test is satisfied for any conversation id
     in ``bot_conversations`` (a set of conversation ids the bot is part of)."""
-    bot_conversation_ids = {str(conversation_id) for conversation_id in bot_conversations}
+    bot_conversation_ids = {
+        str(conversation_id) for conversation_id in bot_conversations
+    }
     return MeinchatInboundHook(
         is_bot_in_conversation=lambda conversation_id: (
             str(conversation_id) in bot_conversation_ids

@@ -32,18 +32,14 @@ def upgrade() -> None:
         _TABLE,
         sa.Column("id", UUID(as_uuid=True), primary_key=True, nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
-        sa.Column(
-            "is_active", sa.Boolean(), nullable=False, server_default=sa.false()
-        ),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("tokens", sa.JSON(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.UniqueConstraint("name", name="uq_bot_meinchat_style_name"),
     )
-    op.create_index(
-        "ix_bot_meinchat_style_name", _TABLE, ["name"], unique=True
-    )
+    op.create_index("ix_bot_meinchat_style_name", _TABLE, ["name"], unique=True)
 
 
 def downgrade() -> None:
