@@ -62,10 +62,18 @@ def app():
         import plugins.meinchat.meinchat.models  # noqa: F401
         import plugins.bot_meinchat.bot_meinchat.models  # noqa: F401
 
-        _db.create_all()
-        yield application
-        _db.session.remove()
-        _db.drop_all()
+        # Build the full schema exactly ONCE, resetting the public schema first
+        # (clearing any table or ENUM type left by a prior crashed run or a
+        # sibling suite sharing this ``*_test`` DB). A per-test create_all/
+        # drop_all strands standalone PG ENUM types and races other suites on
+        # the shared catalog — see vbwd/testing/integration_db.py.
+        from vbwd.testing.integration_db import reset_schema_and_create_all
+
+        reset_schema_and_create_all(_db)
+
+    yield application
+
+    with application.app_context():
         _db.engine.dispose()
 
 
@@ -74,23 +82,32 @@ def client(app):
     return app.test_client()
 
 
-@pytest.fixture
-def db(app):
-    """Session-bound ``db`` for integration tests, cleaned between tests.
+@pytest.fixture(autouse=True)
+def _isolate_test(app):
+    """Clear data before each test (the schema is built once per session).
 
-    The ``app`` fixture is session-scoped (tables created once), so each test
-    starts from a clean ``bot_meinchat_conversation_style`` table.
+    Made autouse because several specs request only ``app`` (not ``db``) yet
+    still seed users/nicknames (e.g. the ``assistant`` bot nickname); without a
+    per-test TRUNCATE they collide via NicknameTakenError when run together.
+    Truncating on SETUP also protects this suite against a sibling suite's
+    mid-session schema reset (DROP SCHEMA CASCADE) in the shared ``*_test`` DB.
     """
     from vbwd.extensions import db as _db
-    from plugins.bot_meinchat.bot_meinchat.models.conversation_style import (
-        BotConversationStyle,
-    )
 
     with app.app_context():
-        _db.session.query(BotConversationStyle).delete()
-        _db.session.commit()
+        from vbwd.testing.integration_db import truncate_all_tables
+
+        truncate_all_tables(_db)
+        yield
+        _db.session.remove()
+
+
+@pytest.fixture
+def db(app):
+    """Hand out the session-bound ``db`` handle for specs that request it. The
+    autouse ``_isolate_test`` fixture has already cleared the tables on setup."""
+    from vbwd.extensions import db as _db
+
+    with app.app_context():
         yield _db
-        _db.session.rollback()
-        _db.session.query(BotConversationStyle).delete()
-        _db.session.commit()
         _db.session.remove()
