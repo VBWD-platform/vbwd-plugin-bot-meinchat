@@ -40,6 +40,30 @@ PROVIDER_ID = "meinchat"
 # meinchat conversation rows are server-readable plaintext in the plain path.
 OUTBOUND_PROTOCOL_HINT = "plain"
 
+# S86.3 D6 — ``ChatRef.chat_id`` is opaque and provider-scoped, so the meinchat
+# provider encodes the PARENT KIND inside its OWN chat_id (bot_base never learns
+# about rooms vs conversations). A room parent is prefixed; a 1:1 conversation
+# stays the bare UUID (unchanged — backward compatible, and any historic ref is
+# still read as a conversation). Because the encoded chat_id differs per parent,
+# bot_base's per-``ChatRef`` ``BotSession`` keys stay correct per room for free
+# (D7) with no dispatcher change.
+ROOM_CHAT_ID_PREFIX = "room:"
+
+
+def encode_room_chat_id(room_id: str) -> str:
+    """Encode a room id into the provider-scoped opaque chat_id."""
+    return f"{ROOM_CHAT_ID_PREFIX}{room_id}"
+
+
+def is_room_chat_id(chat_id: str) -> bool:
+    """True when the opaque chat_id refers to a room (vs a 1:1 conversation)."""
+    return chat_id.startswith(ROOM_CHAT_ID_PREFIX)
+
+
+def decode_room_chat_id(chat_id: str) -> str:
+    """Recover the room id from a room-scoped chat_id (caller checks the kind)."""
+    return chat_id[len(ROOM_CHAT_ID_PREFIX) :]
+
 
 class MeinchatProvider:
     """meinchat adapter implementing the ``IMessengerProvider`` SPI.
@@ -67,14 +91,17 @@ class MeinchatProvider:
     def parse_update(self, raw: dict) -> BotInbound:
         """Normalize a meinchat message dict into a neutral :class:`BotInbound`.
 
-        ``raw`` carries ``conversation_id``, ``sender_id`` and ``body`` (the
-        plain-path server-readable text). Identity is resolved directly from the
-        authenticated sender — no link lookup.
+        ``raw`` carries either ``room_id`` (a room parent, S86.3) or
+        ``conversation_id`` (a 1:1 parent), plus ``sender_id`` and ``body`` (the
+        plain-path server-readable text). The parent kind is encoded into the
+        opaque ``chat_id`` here so bot_base stays room-agnostic. Identity is
+        resolved directly from the authenticated sender — no link lookup.
         """
-        conversation_id = str(raw.get("conversation_id", ""))
         sender_ref = str(raw.get("sender_id", ""))
         body = raw.get("body")
-        chat_ref = ChatRef(provider_id=self.provider_id, chat_id=conversation_id)
+        chat_ref = ChatRef(
+            provider_id=self.provider_id, chat_id=self._encode_chat_id(raw)
+        )
         identity = self._identity_for(sender_ref)
 
         command, args = self._split_command(body)
@@ -95,6 +122,18 @@ class MeinchatProvider:
             action_data=action_data,
             identity=identity,
         )
+
+    @staticmethod
+    def _encode_chat_id(raw: dict) -> str:
+        """Encode the message's parent into the opaque, provider-scoped chat_id.
+
+        A ``room_id`` yields a room-scoped ref; otherwise the bare
+        ``conversation_id`` is used unchanged (the 1:1 path, backward
+        compatible)."""
+        room_id = raw.get("room_id")
+        if room_id:
+            return encode_room_chat_id(str(room_id))
+        return str(raw.get("conversation_id", ""))
 
     def _identity_for(self, sender_ref: str) -> Optional[BotIdentity]:
         """Auto-resolve the authenticated meinchat sender to a vbwd identity."""
@@ -164,14 +203,24 @@ class MeinchatProvider:
     def send(self, reply: BotReply, *, to: ChatRef) -> None:
         """Render ``reply`` as a meinchat message and post it as the bot user.
 
-        Choices ride as structured ``meta`` (rendered as cards by rich clients)
-        AND as the numbered-text ``body`` (the universal fallback — a client
-        ignoring ``meta`` sees today's menu). Liskov: a non-rich client is
-        unchanged.
+        The opaque ``chat_id`` tells the provider whether the parent is a ROOM
+        (``send_room_text``, S86.3 D6) or a 1:1 conversation (``send_text``) —
+        bot_base never makes that distinction. Choices ride as structured
+        ``meta`` (rendered as cards by rich clients) AND as the numbered-text
+        ``body`` (the universal fallback — a client ignoring ``meta`` sees
+        today's menu). Liskov: a non-rich client is unchanged.
         """
         body = self._render_body(reply)
         meta = self._build_meta(reply)
         self.remember_choices(to, reply.choices)
+        if is_room_chat_id(to.chat_id):
+            self._message_sender.send_room_text(
+                room_id=UUID(decode_room_chat_id(to.chat_id)),
+                body=body,
+                protocol_hint=OUTBOUND_PROTOCOL_HINT,
+                meta=meta,
+            )
+            return
         self._message_sender.send_text(
             conversation_id=UUID(to.chat_id),
             body=body,

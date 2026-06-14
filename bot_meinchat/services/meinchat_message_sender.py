@@ -44,3 +44,21 @@ class MeinchatMessageServiceSender:
             protocol_hint=protocol_hint,
             meta=meta,
         )
+
+    def send_room_text(
+        self,
+        *,
+        room_id: UUID,
+        body: str,
+        protocol_hint: str,
+        meta: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """S86.3 D6 — post the bot's reply into a ROOM as the bot user. The bot
+        is a room member, so meinchat's room membership check passes."""
+        self._build_message_service().send_room_text(
+            room_id,
+            sender_user_id=self._resolve_bot_user_id(),
+            body=body,
+            protocol_hint=protocol_hint,
+            meta=meta,
+        )

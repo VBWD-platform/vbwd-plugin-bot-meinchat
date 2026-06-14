@@ -176,6 +176,7 @@ class BotMeinchatPlugin(BasePlugin):
         plugin_manager = getattr(current_app, "plugin_manager", None)
         self._inbound_hook = MeinchatInboundHook(
             is_bot_in_conversation=self._is_bot_in_conversation,
+            is_bot_in_room=self._is_bot_in_room,
             resolve_bot_user_id=self._resolve_bot_user_id,
             build_pipeline=self._pipeline_builder(provider, plugin_manager),
         )
@@ -258,6 +259,24 @@ class BotMeinchatPlugin(BasePlugin):
             return False
         return ConversationService.is_member(bot_user_id, conversation)
 
+    def _is_bot_in_room(self, room_id: UUID) -> bool:
+        """True when the configured bot user is a MEMBER of ``room_id`` (S86.3
+        D6). The room counterpart of ``_is_bot_in_conversation``: it routes the
+        bot's reply into whichever room the bot was invited to (e.g. a widget
+        room). It reads membership through meinchat's RoomMemberRepository (the
+        single source for room membership) off the active request session, so it
+        never captures a stale session and never re-implements the rule (DRY)."""
+        bot_user_id = self._resolve_bot_user_id()
+        if bot_user_id is None:
+            return False
+
+        from vbwd.extensions import db
+        from plugins.meinchat.meinchat.repositories.room_member_repository import (
+            RoomMemberRepository,
+        )
+
+        return RoomMemberRepository(db.session).find(room_id, bot_user_id) is not None
+
     def _pipeline_builder(self, provider, plugin_manager):
         from plugins.bot_meinchat.bot_meinchat.services.inbound_pipeline import (
             MeinchatInboundPipeline,
@@ -286,7 +305,9 @@ class BotMeinchatPlugin(BasePlugin):
     def _build_meinchat_message_service():
         """Rebuild meinchat's MessageService off the active request session,
         wired to meinchat's SSE/Redis bus so the bot reply reaches a live
-        stream (matching meinchat's own contact-form bridge)."""
+        stream (matching meinchat's own contact-form bridge). The room/member
+        repos are supplied so the bot can reply into a ROOM (S86.3 D6) as well
+        as a 1:1 conversation."""
         from vbwd.extensions import db
         from plugins.meinchat.meinchat.repositories.conversation_repository import (
             ConversationRepository,
@@ -297,6 +318,12 @@ class BotMeinchatPlugin(BasePlugin):
         from plugins.meinchat.meinchat.repositories.nickname_repository import (
             NicknameRepository,
         )
+        from plugins.meinchat.meinchat.repositories.room_member_repository import (
+            RoomMemberRepository,
+        )
+        from plugins.meinchat.meinchat.repositories.room_repository import (
+            RoomRepository,
+        )
         from plugins.meinchat.meinchat.routes import _event_bus
         from plugins.meinchat.meinchat.services.message_service import MessageService
 
@@ -306,6 +333,8 @@ class BotMeinchatPlugin(BasePlugin):
             message_repo=MessageRepository(session),
             nickname_repo=NicknameRepository(session),
             event_bus=_event_bus(),
+            room_repo=RoomRepository(session),
+            member_repo=RoomMemberRepository(session),
         )
 
     def _resolve_bot_user_id(self) -> Optional[UUID]:
