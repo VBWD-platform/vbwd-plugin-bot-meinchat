@@ -52,7 +52,7 @@ def _ensure_bot_meinchat_enabled(flask_app) -> None:
     if manager is None:
         return
     with flask_app.app_context():
-        for plugin_name in ("bot_base", "meinchat", "bot_meinchat"):
+        for plugin_name in ("bot-base", "meinchat", "bot-meinchat"):
             plugin = manager.get_plugin(plugin_name)
             if plugin is None or plugin.status == PluginStatus.ENABLED:
                 continue
