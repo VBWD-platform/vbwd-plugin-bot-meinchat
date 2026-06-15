@@ -84,3 +84,28 @@ def _provision_bot_user() -> None:
         nickname,
         email,
     )
+
+
+def populate_db() -> None:
+    """Module-level entrypoint matching the dev-install fallback contract
+    (``from plugins.bot_meinchat.populate_db import populate_db; populate_db()``).
+
+    Assumes an ACTIVE Flask app context (the recipe wraps this in
+    ``with app.app_context():``) — it creates no app of its own. Delegates to
+    the existing ``populate`` (DRY); both seed steps are idempotent.
+    """
+    populate()
+
+
+if __name__ == "__main__":
+    # Self-bootstrapping entrypoint for the platform installer, which invokes
+    # ``PYTHONPATH=. python plugins/bot_meinchat/populate_db.py --force``. Extra
+    # argv (e.g. ``--force``) is intentionally ignored — this seed is always a
+    # full idempotent upsert. ``create_app`` must resolve under PYTHONPATH=. (no
+    # hardcoded /app path) so the venv run works the same as the docker run.
+    from vbwd.app import create_app
+
+    application = create_app()
+    with application.app_context():
+        populate_db()
+    print("[bot-meinchat] populate_db() finished")
