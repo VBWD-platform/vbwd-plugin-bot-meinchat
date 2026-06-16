@@ -19,6 +19,9 @@ CHAT_CONFIG = {
     "llm_api_endpoint": "https://api.fake-llm.local/v1/chat/completions",
     "llm_api_key": "sk-fake",
     "llm_model": "gpt-4o-mini",
+    # S97.5 — the greeting's {model} now surfaces the LLM-connection slug
+    # (config.get("llm_connection_slug") or "default"), not the legacy llm_model.
+    "llm_connection_slug": "gpt-4o-mini",
     "counting_mode": "words",
     "words_per_token": 10,
     "mb_per_token": 0.001,
@@ -265,9 +268,13 @@ def _user_sends_into_room(app, *, hook, room_id, sender_user_id, body):
 
 @pytest.mark.integration
 def test_user_message_in_a_room_is_answered_by_the_bot_in_that_room(app, monkeypatch):
-    from plugins.chat.src.llm_adapter import LLMAdapter
+    from unittest.mock import MagicMock
 
-    monkeypatch.setattr(LLMAdapter, "chat", lambda self, messages: FAKE_LLM_ANSWER)
+    # S97.5 — chat resolves the CORE LLM client (container.llm_client), not the
+    # removed plugins.chat.src.llm_adapter. Stub the client so no network runs.
+    _fake_llm_client = MagicMock()
+    _fake_llm_client.chat.side_effect = lambda messages, **kwargs: FAKE_LLM_ANSWER
+    monkeypatch.setattr(app.container, "llm_client", lambda slug=None: _fake_llm_client)
     _enable_chat_bot(app, monkeypatch)
 
     with app.app_context():
@@ -323,9 +330,13 @@ def test_user_message_in_a_room_is_answered_by_the_bot_in_that_room(app, monkeyp
 
 @pytest.mark.integration
 def test_bot_room_reply_does_not_trigger_a_second_reply_no_loop(app, monkeypatch):
-    from plugins.chat.src.llm_adapter import LLMAdapter
+    from unittest.mock import MagicMock
 
-    monkeypatch.setattr(LLMAdapter, "chat", lambda self, messages: FAKE_LLM_ANSWER)
+    # S97.5 — chat resolves the CORE LLM client (container.llm_client), not the
+    # removed plugins.chat.src.llm_adapter. Stub the client so no network runs.
+    _fake_llm_client = MagicMock()
+    _fake_llm_client.chat.side_effect = lambda messages, **kwargs: FAKE_LLM_ANSWER
+    monkeypatch.setattr(app.container, "llm_client", lambda slug=None: _fake_llm_client)
     _enable_chat_bot(app, monkeypatch)
 
     with app.app_context():
@@ -367,9 +378,13 @@ def test_bot_room_reply_does_not_trigger_a_second_reply_no_loop(app, monkeypatch
 
 @pytest.mark.integration
 def test_room_without_a_bot_member_produces_no_bot_reply(app, monkeypatch):
-    from plugins.chat.src.llm_adapter import LLMAdapter
+    from unittest.mock import MagicMock
 
-    monkeypatch.setattr(LLMAdapter, "chat", lambda self, messages: FAKE_LLM_ANSWER)
+    # S97.5 — chat resolves the CORE LLM client (container.llm_client), not the
+    # removed plugins.chat.src.llm_adapter. Stub the client so no network runs.
+    _fake_llm_client = MagicMock()
+    _fake_llm_client.chat.side_effect = lambda messages, **kwargs: FAKE_LLM_ANSWER
+    monkeypatch.setattr(app.container, "llm_client", lambda slug=None: _fake_llm_client)
     _enable_chat_bot(app, monkeypatch)
 
     with app.app_context():

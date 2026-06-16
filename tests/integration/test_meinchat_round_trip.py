@@ -18,6 +18,9 @@ CHAT_CONFIG = {
     "llm_api_endpoint": "https://api.fake-llm.local/v1/chat/completions",
     "llm_api_key": "sk-fake",
     "llm_model": "gpt-4o-mini",
+    # S97.5 — the greeting's {model} now surfaces the LLM-connection slug
+    # (config.get("llm_connection_slug") or "default"), not the legacy llm_model.
+    "llm_connection_slug": "gpt-4o-mini",
     "counting_mode": "words",
     "words_per_token": 10,
     "mb_per_token": 0.001,
@@ -180,9 +183,13 @@ def _latest_bot_reply(app, conversation_id, bot_user_id):
 
 @pytest.mark.integration
 def test_hello_llm_then_free_text_round_trip_over_meinchat(app, monkeypatch):
-    from plugins.chat.src.llm_adapter import LLMAdapter
+    from unittest.mock import MagicMock
 
-    monkeypatch.setattr(LLMAdapter, "chat", lambda self, messages: FAKE_LLM_ANSWER)
+    # S97.5 — chat resolves the CORE LLM client (container.llm_client), not the
+    # removed plugins.chat.src.llm_adapter. Stub the client so no network runs.
+    _fake_llm_client = MagicMock()
+    _fake_llm_client.chat.side_effect = lambda messages, **kwargs: FAKE_LLM_ANSWER
+    monkeypatch.setattr(app.container, "llm_client", lambda slug=None: _fake_llm_client)
     _enable_chat_bot(app, monkeypatch)
 
     with app.app_context():
@@ -250,9 +257,13 @@ def test_user_finds_bot_and_is_answered_in_their_own_conversation(app, monkeypat
     opens a conversation with it, and the plugin's post-send hook answers in
     THAT conversation — proving the bot answers anyone who chats with it (no
     single pre-set bot_conversation_id)."""
-    from plugins.chat.src.llm_adapter import LLMAdapter
+    from unittest.mock import MagicMock
 
-    monkeypatch.setattr(LLMAdapter, "chat", lambda self, messages: FAKE_LLM_ANSWER)
+    # S97.5 — chat resolves the CORE LLM client (container.llm_client), not the
+    # removed plugins.chat.src.llm_adapter. Stub the client so no network runs.
+    _fake_llm_client = MagicMock()
+    _fake_llm_client.chat.side_effect = lambda messages, **kwargs: FAKE_LLM_ANSWER
+    monkeypatch.setattr(app.container, "llm_client", lambda slug=None: _fake_llm_client)
     _enable_chat_bot(app, monkeypatch)
 
     with app.app_context():
