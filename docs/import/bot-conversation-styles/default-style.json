@@ -1,0 +1,21 @@
+{
+  "vbwd_export": "bot_conversation_styles",
+  "version": 1,
+  "bot_conversation_styles": [
+    {
+      "name": "Default",
+      "is_active": true,
+      "tokens": {
+        "card_bg": "#ffffff",
+        "card_border": "#e2e8f0",
+        "card_radius": "12px",
+        "card_fg": "#1a202c",
+        "accent": "#3182ce",
+        "badge_bg": "#3182ce",
+        "badge_fg": "#ffffff",
+        "hint": "#718096",
+        "gap": "8px"
+      }
+    }
+  ]
+}

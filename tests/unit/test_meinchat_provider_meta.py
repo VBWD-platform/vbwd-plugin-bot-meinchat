@@ -117,6 +117,38 @@ class TestOutboundMeta:
 
         assert sender.sent[0]["meta"]["choices"][0]["hint"] == "€29/mo"
 
+    def test_choice_url_is_included_when_present(self):
+        sender = _RecordingSender()
+        provider = _provider(sender=sender)
+
+        choice = BotChoice(
+            label="Open page",
+            action_data="search:open:shop_product:blue-shirt",
+            url="/shop/product/blue-shirt",
+        )
+        provider.send(
+            BotReply(text="Detail", choices=[choice]),
+            to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())),
+        )
+
+        serialized = sender.sent[0]["meta"]["choices"][0]
+        assert serialized["url"] == "/shop/product/blue-shirt"
+        assert serialized["action_data"] == "search:open:shop_product:blue-shirt"
+
+    def test_choice_without_url_omits_the_url_key(self):
+        sender = _RecordingSender()
+        provider = _provider(sender=sender)
+
+        provider.send(
+            BotReply(
+                text="Pick",
+                choices=[BotChoice(label="Reveal", action_data="taro:reveal:1")],
+            ),
+            to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())),
+        )
+
+        assert "url" not in sender.sent[0]["meta"]["choices"][0]
+
 
 class TestOutboundRichKinds:
     """S70.3 — ``BotReply.meta`` (provider-neutral) flows into ``message.meta``."""

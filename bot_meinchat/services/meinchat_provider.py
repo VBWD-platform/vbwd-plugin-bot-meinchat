@@ -257,7 +257,12 @@ class MeinchatProvider:
 
     @staticmethod
     def _serialize_choices(choices: List[BotChoice]) -> List[Dict[str, Any]]:
-        """Serialize choices, including each optional ``hint`` when present."""
+        """Serialize choices, including each optional ``hint`` / ``url`` present.
+
+        ``url`` (a public fe route) rides in ``message.meta.choices[].url`` so a
+        rich widget can NAVIGATE to it on tap instead of sending the choice back;
+        it is read defensively via ``getattr`` and only emitted when set, so a
+        choice without a url is unchanged (Liskov)."""
         serialized_choices = []
         for choice in choices:
             entry: Dict[str, Any] = {
@@ -267,6 +272,9 @@ class MeinchatProvider:
             hint = getattr(choice, "hint", None)
             if hint:
                 entry["hint"] = hint
+            url = getattr(choice, "url", None)
+            if url:
+                entry["url"] = url
             serialized_choices.append(entry)
         return serialized_choices
 
