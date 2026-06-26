@@ -1,6 +1,6 @@
 """bot-meinchat plugin — the second ``IMessengerProvider`` (in-process, D9).
 
-It PROVES the bot-base abstraction (D6/D10): the same ``chat`` / ``taro``
+It PROVES the bot-base abstraction (D6/D10): the same ``chat`` / ``tarot``
 consumers light up *inside meinchat* with zero consumer edit. The contrasts with
 Telegram are the evidence the seam is provider-neutral:
 

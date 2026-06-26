@@ -106,7 +106,7 @@ def test_parse_update_numbered_choice_tap_maps_to_action_data():
     provider.remember_choices(
         ChatRef(provider_id="meinchat", chat_id=str(conversation_id)),
         [
-            BotChoice(label="Reveal", action_data="taro:reveal:1"),
+            BotChoice(label="Reveal", action_data="tarot:reveal:1"),
             BotChoice(label="Cancel", action_data="bot-base:cancel:0"),
         ],
     )
@@ -143,7 +143,7 @@ def test_send_renders_choices_as_numbered_text_fallback():
     reply = BotReply(
         text="Pick one",
         choices=[
-            BotChoice(label="Reveal", action_data="taro:reveal:1"),
+            BotChoice(label="Reveal", action_data="tarot:reveal:1"),
             BotChoice(label="Cancel", action_data="bot-base:cancel:0"),
         ],
     )

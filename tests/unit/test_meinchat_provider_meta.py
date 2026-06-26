@@ -57,7 +57,7 @@ class TestOutboundMeta:
         reply = BotReply(
             text="Pick one",
             choices=[
-                BotChoice(label="Reveal", action_data="taro:reveal:1"),
+                BotChoice(label="Reveal", action_data="tarot:reveal:1"),
                 BotChoice(label="Cancel", action_data="bot-base:cancel:0"),
             ],
         )
@@ -68,7 +68,7 @@ class TestOutboundMeta:
         assert meta == {
             "kind": "bot_choices",
             "choices": [
-                {"label": "Reveal", "action_data": "taro:reveal:1"},
+                {"label": "Reveal", "action_data": "tarot:reveal:1"},
                 {"label": "Cancel", "action_data": "bot-base:cancel:0"},
             ],
         }
@@ -78,7 +78,7 @@ class TestOutboundMeta:
         provider = _provider(sender=sender)
         reply = BotReply(
             text="Pick one",
-            choices=[BotChoice(label="Reveal", action_data="taro:reveal:1")],
+            choices=[BotChoice(label="Reveal", action_data="tarot:reveal:1")],
         )
 
         provider.send(reply, to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())))
@@ -142,7 +142,7 @@ class TestOutboundMeta:
         provider.send(
             BotReply(
                 text="Pick",
-                choices=[BotChoice(label="Reveal", action_data="taro:reveal:1")],
+                choices=[BotChoice(label="Reveal", action_data="tarot:reveal:1")],
             ),
             to=ChatRef(provider_id="meinchat", chat_id=str(uuid4())),
         )

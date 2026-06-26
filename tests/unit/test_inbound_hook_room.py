@@ -82,13 +82,13 @@ def test_room_message_carries_protocol_and_meta_through():
             sender_id=uuid4(),
             body="2",
             protocol="plain",
-            meta={"kind": "bot_action", "action_data": "taro:reveal:1"},
+            meta={"kind": "bot_action", "action_data": "tarot:reveal:1"},
         )
     )
 
     raw = pipeline.handled[0]
     assert raw["protocol"] == "plain"
-    assert raw["meta"] == {"kind": "bot_action", "action_data": "taro:reveal:1"}
+    assert raw["meta"] == {"kind": "bot_action", "action_data": "tarot:reveal:1"}
 
 
 def test_room_message_where_bot_is_not_a_member_is_never_ingested():

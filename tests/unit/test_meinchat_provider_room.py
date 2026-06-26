@@ -138,7 +138,7 @@ def test_room_reply_choices_ride_as_meta_and_numbered_fallback():
         BotReply(
             text="Pick one",
             choices=[
-                BotChoice(label="Reveal", action_data="taro:reveal:1"),
+                BotChoice(label="Reveal", action_data="tarot:reveal:1"),
                 BotChoice(label="Cancel", action_data="bot-base:cancel:0"),
             ],
         ),
