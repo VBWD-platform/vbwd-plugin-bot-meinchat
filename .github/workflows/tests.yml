@@ -31,6 +31,9 @@ jobs:
         run: |
           git clone --depth=1 -q https://github.com/VBWD-platform/vbwd-plugin-bot-base.git vbwd-backend/plugins/bot_base || true
           git clone --depth=1 -q https://github.com/VBWD-platform/vbwd-plugin-meinchat.git vbwd-backend/plugins/meinchat || true
+          # Integration tests drive the chat plugin (get_plugin("chat").set_config); chat needs bot_telegram.
+          git clone --depth=1 -q https://github.com/VBWD-platform/vbwd-plugin-chat.git vbwd-backend/plugins/chat || true
+          git clone --depth=1 -q https://github.com/VBWD-platform/vbwd-plugin-bot-telegram.git vbwd-backend/plugins/bot_telegram || true
 
       # ── 3. Style checks (black · flake8 · mypy) ───────────────────────────
       - name: Set up Python 3.11
