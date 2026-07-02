@@ -29,7 +29,7 @@ from uuid import UUID
 
 from flask import current_app
 
-from vbwd.plugins.base import BasePlugin, PluginMetadata
+from vbwd.plugins.base import BasePlugin, PluginMetadata, PublicRouteDeclaration
 
 if TYPE_CHECKING:
     from flask import Blueprint
@@ -90,6 +90,14 @@ class BotMeinchatPlugin(BasePlugin):
         if config:
             merged.update(config)
         super().initialize(merged)
+
+    def declare_public_routes(self) -> PublicRouteDeclaration:
+        """Public active chat-bot conversation style for the widget."""
+        return PublicRouteDeclaration(
+            read={
+                "/api/v1/bot-conversation-style/active": "Public active chat-bot conversation style for the widget.",
+            },
+        )
 
     def get_blueprint(self) -> Optional["Blueprint"]:
         # S70.2 — the bot-conversation style surface (admin CRUD + public
