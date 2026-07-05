@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vbwd-plugin-bot-meinchat"
+version = "26.6.1"
+description = "VBWD backend plugin: bot_meinchat"
+requires-python = ">=3.11"
+license = { text = "BSL-1.1" }
+dependencies = []
+
+# Runtime lives inside the vbwd-backend host, which provides `vbwd.*` (core) and
+# any sibling plugins declared in PluginMetadata.dependencies. Those are NOT pinned
+# here so the wheel stays host-agnostic; install the host separately.
+
+[tool.setuptools]
+# The repo root IS the plugins/bot_meinchat/ directory; remap it so the wheel exposes
+# the `plugins.bot_meinchat` package that runtime imports (e.g. `from plugins.bot_meinchat...`).
+package-dir = { "plugins.bot_meinchat" = "." }
+packages = [
+    "plugins.bot_meinchat",
+    "plugins.bot_meinchat.bot_meinchat",
+    "plugins.bot_meinchat.bot_meinchat.models",
+    "plugins.bot_meinchat.bot_meinchat.repositories",
+    "plugins.bot_meinchat.bot_meinchat.services",
+    "plugins.bot_meinchat.bot_meinchat.services.data_exchange",
+]
+
+[tool.setuptools.package-data]
+# Ship everything a pip-installed plugin needs to be self-complete: config JSON,
+# Alembic migrations (the shared backend env.py resolves version_locations from
+# the installed package path), seed scripts, and bin/ helpers.
+"plugins.bot_meinchat" = [
+    "*.json",
+    "migrations/*.py",
+    "migrations/*.mako",
+    "migrations/*.ini",
+    "migrations/**/*.py",
+    "migrations/**/*.mako",
+    "populate_db.py",
+    "populate_*.py",
+    "demo_seed.py",
+    "bin/*",
+    "bin/**/*",
+]
