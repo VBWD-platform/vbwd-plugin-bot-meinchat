@@ -155,14 +155,17 @@ def _build_pipeline(app, *, bot_user_id):
 
 
 def _enable_chat_bot(app, monkeypatch):
-    plugin = app.plugin_manager.get_plugin("chat")
+    # The meinchat bot reads its config from the "meinchat" namespace
+    # (config_store.get_config("meinchat")); the legacy "chat" plugin was
+    # retired, so target meinchat here.
+    plugin = app.plugin_manager.get_plugin("meinchat")
     for key, value in CHAT_CONFIG.items():
         plugin.set_config(key, value)
 
     original_get_config = app.config_store.get_config
 
     def _patched_get_config(plugin_name):
-        if plugin_name == "chat":
+        if plugin_name == "meinchat":
             return dict(CHAT_CONFIG)
         return original_get_config(plugin_name)
 
